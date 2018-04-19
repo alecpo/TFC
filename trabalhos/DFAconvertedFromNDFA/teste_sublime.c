@@ -34,51 +34,54 @@ void limpaVetor(int n, char *estAux){
 	estAux[n-1] = '\0';
 }
 
-void main()
+void main(int argc, char *argv[])
 {
-	FILE *arq;
-	int i,linha,coluna,novosEstados=0,or,tr;
+	FILE *arqAFN;
+	FILE *arqAFD;
+	int i,linha,coluna,novosEstados=0,or,tr,x=0,aceita;
 	char *busca;
 	char Linha[100];
 	char estadosAFN[100] = "";
+	char estadosFinaisAFN[100] = "";
 	char estadosAFD[100] = "";
+	char estadosFinaisAFD[100] = "";
 	char estadosPuros[100] = "";
 	char alfabeto[50] = "";
 	char aux[2] = "\0",origem,destino,transicao;
 	char *result;
 	system("cls");
 	// Abre um arquivo TEXTO para LEITURA
-	arq = fopen("af.jff", "rt");
-	if (arq == NULL){  // Se houve erro na abertura
+	arqAFN = fopen("afn.jff", "rt");
+	if (arqAFN == NULL){  // Se houve erro na abertura
 		printf("Problemas na abertura do arquivo\n");
 		return;
 	}
 
-	while (!feof(arq)){
+	while (!feof(arqAFN)){
 	// Lê uma linha (inclusive com o '\n')
-	result = fgets(Linha, 100, arq);  // o 'fgets' lê até 99 caracteres ou até o '\n'
+	result = fgets(Linha, 100, arqAFN);  // o 'fgets' lê até 99 caracteres ou até o '\n'
 	if (result)  // Se foi possível ler
 		if(busca = strstr(Linha,"id=")){
 			aux[0]=*(busca+4);
-			strcat(estadosAFN,aux);
 			strcat(estadosPuros,aux);
 			
 		}
-		else
-			if(strstr(Linha,"<i"))
-				strcat(estadosAFN,"i");
+		else 
+			if(strstr(Linha,"<fi")){
+				strcat(estadosFinaisAFN,aux);
+				strcat(estadosFinaisAFD,aux);
+			}
 			else 
-				if(strstr(Linha,"<fi"))
-					strcat(estadosAFN,"f");
-				else 
-					if(strstr(Linha,"</sta"))
-						strcat(estadosAFN,";");
-					else
-						if(busca = strstr(Linha,"<r")){
-							aux[0]=*(busca+6);
-							if(!strstr(alfabeto,aux))
-								strcat(alfabeto,aux);
-						}
+				if(strstr(Linha,"</sta")){
+					strcat(estadosAFN,aux);
+					strcat(estadosAFD,aux);
+				}
+				else
+					if(busca = strstr(Linha,"<r")){
+						aux[0]=*(busca+6);
+						if(!strstr(alfabeto,aux))
+							strcat(alfabeto,aux);
+					}
 	}
 	for(i=0; i<strlen(alfabeto); i++)
 		printf("%c = %d\n",alfabeto[i],i);
@@ -96,10 +99,10 @@ void main()
 	for(i = 0; i<strlen(estadosPuros); i++)
 		for (int  j= 0; j < strlen(alfabeto); j++)
 			for (int k = 0; k < strlen(estadosPuros)*strlen(alfabeto); k++)
-				afn[i][j][k]='|';//inicia afn sem transicoes (representado pelo simbolo §).
-	fseek(arq,0,SEEK_SET);
-	while (!feof(arq)){
-		result = fgets(Linha, 100, arq);
+				afn[i][j][k]='|';//inicia afn sem transicoes (representado pelo simbolo |).
+	fseek(arqAFN,0,SEEK_SET);
+	while (!feof(arqAFN)){
+		result = fgets(Linha, 100, arqAFN);
 		if(result)
 			if(busca = strstr(Linha,"<fr"))
 				origem=*(busca+6);
@@ -120,13 +123,35 @@ void main()
 						afn[or][tr][i] = destino;
 					}
 	}
-	printf("Estados AFN: %s TamString: %d\n",estadosAFN,strlen(estadosAFN));
-	estadosAFD[0] = estadosAFN[0];
-	estadosAFD[1] = estadosAFN[1];
-	estadosAFD[2] = estadosAFN[2];
+
+	printf("Estados AFN: %s\nEstados Finais do AFN: %s\nQnt Estados do AFN: %d\n",estadosAFN,estadosFinaisAFN,strlen(estadosAFN));
+
 	printf("Alfabeto: %s\n",alfabeto);
 
-	fclose(arq);
+	fclose(arqAFN);
+
+	//validação 1: Aceita vazio ?
+	if(argc == 1){
+		aux[0] = estadosAFN[0];
+		if(strstr(estadosFinaisAFN,aux))//se o estado inicial for de aceite, o automato aceita frase vazia
+			aceita = 1;
+		else{
+			system("cls");
+			printf("REJEITA\n");
+			exit(1);			
+		}
+	}
+	//validação 2: sentenca possui apenas terminais que fazem parte do alfabeto ?
+	char sentenca[strlen(argv[1])];
+	strcpy(sentenca,argv[1]);
+	for(int t = 0; t < strlen(sentenca); t++){
+		aux[0] = sentenca[t];
+		if(!strstr(alfabeto,aux)){
+			system("cls");
+			printf("REJEITA\n");
+			exit(1);
+		}
+	}
 	
 	//inicia AFD sem transicoes.
 	for (i = 0; i < (strlen(estadosPuros)*strlen(estadosPuros))-1; i++)
@@ -167,11 +192,15 @@ void main()
 
 			//verifica linha a linha da matriz de novos estadosAFN se o estado ja está inserido
 			for (int m = 0; m < qntNovosEstAFD; ++m){
-				for (int n = 0; n < strlen(estadosPuros); ++n) //copia cada linha em linhaALinha
+				for (int n = 0; n < strlen(estadosPuros); ++n){ //copia cada linha em linhaALinha
 					linhaALinha[n] = novosEstadosParaOAFD[m][n];
+				}
 				if(afd[i][j] == '|')//se a celula do AFD for vazio, preenche com qndEstadoVelho + indice
-					if(strstr(linhaALinha,estAux))//se coincidir, cria estado novo na matriz do AFD
-						afd[i][j] = (m + strlen(estadosPuros)) + '0'; //passa para char.
+					if(strstr(linhaALinha,estAux)){//se coincidir, cria estado novo na matriz do AFD
+						aux[0] = (m + strlen(estadosPuros)) + '0'; //passa para char.
+						afd[i][j] = aux[0];
+						strcat(estadosAFD,aux);
+					}
 			}
 			limpaVetor(strlen(estadosPuros)+1,estAux);
 			coluna = 0;
@@ -184,7 +213,6 @@ void main()
 		for(int j = 0; j < strlen(alfabeto); j++){				//(depois de ter copiado do AFN, transformando conjunto de estadosAFN em apenas um)
 			for (int m = 0; m < strlen(estadosPuros); ++m)
 				if(novosEstadosParaOAFD[i-strlen(estadosPuros)][m] != '|')//percorre cada celula da matriz de novos estadosAFN 
-					//PAREI AQUI, NESSA CONSTRUÇÃO DESSE FOR.
 					for (int c = 1; c < strlen(estadosPuros); c++)
 						if(afn[(novosEstadosParaOAFD[i-strlen(estadosPuros)][m]-'0')][j][c] != '|')
 							if(c == 1){
@@ -204,19 +232,106 @@ void main()
 					for (int n = 0; n < strlen(estadosPuros); ++n)
 						linhaALinha[n] = novosEstadosParaOAFD[m][n];
 					if(afd[i][j] == '|')//se a celula do AFD for vazio, preenche com qndEstadoVelho + indice
-						if(strstr(linhaALinha,uniao))//se coincidir, cria estado novo na matriz do AFD
+						if(strstr(linhaALinha,uniao)){//se ja existir o estado, insere no AFD a transicao para ele 
 							afd[i][j] = (m + strlen(estadosPuros)) + '0'; //passa para char.
-						else
+						}
+						else 											  //senão, cria novo estado e insere transicao no AFD
 							if(m == qntNovosEstAFD-1){
 								for(int l = 0; l < strlen(estadosPuros); l++)
 									novosEstadosParaOAFD[linha][l] = uniao[l];
-								afd[i][j] = (linha + strlen(estadosPuros)) + '0';
+								aux[0] = (linha + strlen(estadosPuros)) + '0';
+								afd[i][j] = aux[0];
+								//printf("\nConcatenando '%c' em estadosAFD\nlinha vale: %d\n",aux[0],linha);
+								strcat(estadosAFD,aux);
 								linha++;
 							}
 				}
 			limpaVetor(strlen(estadosPuros)+1,uniao);				
 		}	
 	}
+
+	//preenche vetor de estados finais do afd
+	for (int m = 0; m < qntNovosEstAFD; ++m)
+		for (int n = 0; n < strlen(estadosPuros); ++n){
+			aux[0] = novosEstadosParaOAFD[m][n];
+			if( strstr(estadosFinaisAFN,aux) ) {
+				aux[0] = (m + strlen(estadosPuros)) + '0';
+				strcat(estadosFinaisAFD,aux);
+				break;
+			}
+		}
+
+	// monta AFD.jff
+	arqAFD = fopen("afd.jff", "wt");
+	if (arqAFD == NULL){  // Se houve erro na abertura
+		printf("Problemas na abertura do arquivo\n");
+		return;
+	}
+	//inicializando arquivo AFD.jff
+	fputs("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?><!--Created with JFLAP 6.4.~sqn~-->\n",arqAFD);
+	fputs("<structure>\n\t<type>fa</type>\n\t<automaton>\n\t\t<!--The list of states.-->\n",arqAFD);
+	//criando estados
+	aux[0] = estadosAFD[0];
+	fputs("\t\t<state id=\"",arqAFD); fputs(aux,arqAFD); fputs("\" name=\"",arqAFD); fputs(aux,arqAFD); fputs("\">\n",arqAFD);
+	fputs("\t\t\t<x>",arqAFD); fprintf(arqAFD,"%d",x); fputs(".0</x>\n",arqAFD);
+	fputs("\t\t\t<y>108.0</y>\n",arqAFD);
+	fputs("\t\t\t<initial/>\n",arqAFD);
+	fputs("\t\t</state>\n",arqAFD);
+	x += 40;
+	for(int e = 1; e < strlen(estadosAFD); e++){ //estados normais
+		aux[0] = estadosAFD[e];
+		if(!strstr(estadosFinaisAFD,aux)){//verifica se nao é estado final
+			fputs("\t\t<state id=\"",arqAFD); fputs(aux,arqAFD); fputs("\" name=\"",arqAFD); fputs(aux,arqAFD); fputs("\">\n",arqAFD);
+			fputs("\t\t\t<x>",arqAFD); fprintf(arqAFD,"%d",x); fputs(".0</x>\n",arqAFD);
+			fputs("\t\t\t<y>108.0</y>\n",arqAFD);
+			fputs("\t\t</state>\n",arqAFD);
+			x += 40;
+		}	
+	}
+	for(int e = 0; e < strlen(estadosFinaisAFD); e++){ //estados finais
+		aux[0] = estadosFinaisAFD[e];
+		fputs("\t\t<state id=\"",arqAFD); fputs(aux,arqAFD); fputs("\" name=\"",arqAFD); fputs(aux,arqAFD); fputs("\">\n",arqAFD);
+		fputs("\t\t\t<x>",arqAFD); fprintf(arqAFD,"%d",x); fputs(".0</x>\n",arqAFD);
+		fputs("\t\t\t<y>108.0</y>\n",arqAFD);
+		fputs("\t\t\t<final/>\n",arqAFD);
+		fputs("\t\t</state>\n",arqAFD);
+		x += 40;
+	}
+	//cria transicoes
+	fputs("\t\t<!--The list of transitions.-->\n",arqAFD);
+	for(int m = 0; m < (strlen(estadosPuros)*strlen(estadosPuros))-1; m++)
+		for(int n = 0; n < strlen(alfabeto); n++){
+			if(afd[m][n] != '|'){
+				fputs("\t\t<transition>\n",arqAFD);
+				fputs("\t\t\t<from>",arqAFD); fprintf(arqAFD,"%d",m); fputs("</from>\n",arqAFD);
+				fputs("\t\t\t<to>",arqAFD); fprintf(arqAFD,"%d",afd[m][n] - '0'); fputs("</to>\n",arqAFD);
+				fputs("\t\t\t<read>",arqAFD); fputc(alfabeto[n],arqAFD); fputs("</read>\n",arqAFD);
+				fputs("\t\t</transition>\n",arqAFD);
+			}
+		}
+	fputs("\t</automaton>\n</structure>",arqAFD);
+
+	fclose(arqAFD);
+
+	aux[0]=estadosAFD[0]; //aux = estado atual. Começa no estado inicial; 
+	//consome sentença e decide se aceita
+	for(int t = 0; t < strlen(sentenca); t++){
+		for(int a = 0; a < strlen(alfabeto); a++){//percorro o alfabeto para pegar o indice do terminal lido na entrada (valor numerico do terminal)
+			if(sentenca[t] == alfabeto[a])
+				if(afd[aux[0] - '0'][a] != '|')
+					aux[0] = afd[aux[0] - '0'][a]; //muda pro estado de destino
+				else{
+					system("cls");
+					printf("REJEITA\n");
+					exit(1);
+				}
+		}
+	}
+
+	if(strstr(estadosFinaisAFD,aux))
+		aceita = 1;
+	else
+		aceita = 0;
 
 
 	//imprime matriz novosEstadosParaOAFD
@@ -260,7 +375,7 @@ void main()
 		printf("\n");
 	}
 
-	//imprime AFN
+	//imprime AFD
 	printf("\n\nImprimindo afd...\n    ");
 	for (int terminal = 0; terminal < strlen(alfabeto); ++terminal)
 	{
@@ -277,10 +392,15 @@ void main()
 		printf("\n");
 	}
 
-	printf("Estados AFD: %s TamString: %d\n",estadosAFD,strlen(estadosAFD));
+	printf("Estados AFD: %s\nEstados Finais AFD: %s\nQnt Estados AFD: %d\n\n",estadosAFD,estadosFinaisAFD,strlen(estadosAFD));
 
-	system("pause");
-	system("cls");	
+	if(aceita){
+		printf("\n\nACEITA\n");
+		exit(1);
+	}else{
+		printf("\n\nREJEITA\n");
+		exit(1);
+	}
 
 	return;
 }
