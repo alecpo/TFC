@@ -38,7 +38,7 @@ void main(int argc, char *argv[])
 {
 	FILE *arqAFN;
 	FILE *arqAFD;
-	int i,linha,coluna,novosEstados=0,or,tr,x=0,aceita;
+	int i,linha,or,tr,x=0,aceita;
 	char *busca;
 	char Linha[100];
 	char estadosAFN[100] = "";
@@ -68,6 +68,7 @@ void main(int argc, char *argv[])
 		}
 		else 
 			if(strstr(Linha,"<fi")){
+				printf("\nAchou estado de aceite\n");
 				strcat(estadosFinaisAFN,aux);
 				strcat(estadosFinaisAFD,aux);
 			}
@@ -75,6 +76,7 @@ void main(int argc, char *argv[])
 				if(strstr(Linha,"</sta")){
 					strcat(estadosAFN,aux);
 					strcat(estadosAFD,aux);
+					//InserirElementoVetor(aux[0],estadosAFD,strlen(estadosAFD));
 				}
 				else
 					if(busca = strstr(Linha,"<r")){
@@ -88,17 +90,20 @@ void main(int argc, char *argv[])
 
 	int qntNovosEstAFD=(strlen(estadosPuros)*strlen(estadosPuros))-1-strlen(estadosPuros);
 	char afn[strlen(estadosPuros)][strlen(alfabeto)][strlen(estadosPuros)];//tercero eixo no pior dos casos
-	char estAux[strlen(estadosPuros)+1],linhaALinha [strlen(estadosPuros)+1];
+	char estAux[strlen(estadosPuros)+1],linhaALinha[strlen(estadosPuros)+1];
 	char afd[(strlen(estadosPuros)*strlen(estadosPuros))-1][strlen(alfabeto)];
 	char novosEstadosParaOAFD[qntNovosEstAFD][strlen(estadosPuros)];
 	char uniao[strlen(estadosPuros)+1];
+	char auxOrdenacao[strlen(estadosPuros)+1];
 
+	limpaVetor(strlen(estadosPuros)+1,auxOrdenacao);
 	limpaVetor(strlen(estadosPuros)+1,estAux);
 	limpaVetor(strlen(estadosPuros)+1,uniao);
+	limpaVetor(strlen(estadosPuros)+1,linhaALinha);
 
 	for(i = 0; i<strlen(estadosPuros); i++)
 		for (int  j= 0; j < strlen(alfabeto); j++)
-			for (int k = 0; k < strlen(estadosPuros)*strlen(alfabeto); k++)
+			for (int k = 0; k < strlen(estadosPuros); k++)
 				afn[i][j][k]='|';//inicia afn sem transicoes (representado pelo simbolo |).
 	fseek(arqAFN,0,SEEK_SET);
 	while (!feof(arqAFN)){
@@ -123,6 +128,21 @@ void main(int argc, char *argv[])
 						afn[or][tr][i] = destino;
 					}
 	}
+	/********* IMPORANTE: ORDENA AFN ***********/ 
+	for(i = 0; i<strlen(estadosPuros); i++)
+		for (int  j= 0; j < strlen(alfabeto); j++){
+			for (int k = 0; k < strlen(estadosPuros); k++){
+				InserirElementoVetor(afn[i][j][k],auxOrdenacao,strlen(estadosPuros));
+				if(k == strlen(estadosPuros)-1){
+					for (int a = 0; a < strlen(estadosPuros); a++){
+						afn[i][j][a] = auxOrdenacao[a];
+					}
+				}
+			}
+			limpaVetor(strlen(estadosPuros)+1,auxOrdenacao);
+		}
+
+
 
 	printf("Estados AFN: %s\nEstados Finais do AFN: %s\nQnt Estados do AFN: %d\n",estadosAFN,estadosFinaisAFN,strlen(estadosAFN));
 
@@ -168,42 +188,108 @@ void main(int argc, char *argv[])
 	//PERCORRE O AFN E INSTANCIA NOVOS ESTADOS NA MATRIZ novosEstadosParaOAFD
 	for(i = 0; i<strlen(estadosPuros); i++){
 		for (int  j= 0; j < strlen(alfabeto); j++){
-			for (int k = 1; k < strlen(estadosPuros); k++)
-				if(afn[i][j][k] != '|')
+			limpaVetor(strlen(estadosPuros)+1,estAux);
+			limpaVetor(strlen(estadosPuros)+2,linhaALinha);
+			//printf("\nlinhaALinha limpado: %s\n", linhaALinha);
+			for (int k = 1; k < strlen(estadosPuros); k++){
+				if(afn[i][j][k] != '|'){
 					if(k == 1){
-						novosEstados++;
-						novosEstadosParaOAFD[linha][0] = afn[i][j][0];
-						estAux[0] = afn[i][j][0];
-						coluna++;
-						novosEstadosParaOAFD[linha][k] = afn[i][j][k];
-						coluna++;
-						estAux[k] = afn[i][j][k];
-						linha++;
+						InserirElementoVetor(afn[i][j][0], estAux, strlen(estadosPuros));
+						InserirElementoVetor(afn[i][j][k], estAux, strlen(estadosPuros));
+						if(afn[i][j][k+1] == '|' || afn[i][j][k+1] == '\0'){
+							//printf("\nestAux com 2: %s Pode talvez inserir na linha: %d\n", estAux,linha);
+							//verifica se ja tem o estado em novosEstadosParaOAFD
+							for (int m = 0; m <= linha; ++m){
+								for (int n = 0; n < strlen(estadosPuros); ++n){ //copia cada linha em linhaALinha
+									InserirElementoVetor(novosEstadosParaOAFD[linha][n],linhaALinha,strlen(estadosPuros)+1);
+								}
+								//printf("linhaALinha[%d]: %s\n",m, linhaALinha);
+								if(!strstr(linhaALinha,estAux)){//se nao tiver, ai eu insiro o novo estado na matriz novosEstadosParaOAFD 
+									if(strstr(linhaALinha,"|||||")){
+										//printf("A linhaAlinha[%d] Nao contem nada\n",linha);
+										for(int k=0; k<strlen(estadosPuros); k++){
+											novosEstadosParaOAFD[linha][k] = estAux[k];
+										}
+										//printf("Incluido com sucesso: novosEstadosParaOAFD[%d] = ", linha);
+										//for(int k=0; k<strlen(estadosPuros); k++){
+										//	printf("%c",novosEstadosParaOAFD[linha][k]);
+										//}
+										//printf("\n");
+									}	
+								}
+								else{
+									break;
+								}
+							}
+							linha++;
+							break;//nao fica fazendo compação desnecessaria com o '|', ou seja, sai do for do k
+						}
 					}
 					else{
-						novosEstadosParaOAFD[linha][k] = afn[i][j][k];
-						coluna++;
-						estAux[k] = afn[i][j][k];
+						InserirElementoVetor(afn[i][j][k], estAux, strlen(estadosPuros));
+						if(afn[i][j][k+1] == '|' || afn[i][j][k+1] == '\0'){
+							//printf("\nestAux : %s Linha: %d\n", estAux,linha);
+							//verifica se ja tem o estado em novosEstadosParaOAFD
+							for (int m = 0; m <= linha; ++m){
+								for (int n = 0; n < strlen(estadosPuros); ++n){ //copia cada linha em linhaALinha
+									InserirElementoVetor(novosEstadosParaOAFD[linha][n],linhaALinha,strlen(estadosPuros)+1);
+								}
+								//printf("linhaALinha: %s\n", linhaALinha);
+								if(!strstr(linhaALinha,estAux)){//se nao tiver, ai eu insiro o novo estado na matriz novosEstadosParaOAFD 
+									if(strstr(linhaALinha,"|||||"))
+										for(int k=0; k<strlen(estadosPuros); k++){
+											novosEstadosParaOAFD[linha][k] = estAux[k];
+										}
+								}
+								else{//se achar o estado na tabela, para de procurar (sai do for do m ali em cima)
+									break;
+								}
+							}
+							linha++;
+							break;//nao fica fazendo compação desnecessaria com o '|', ou seja, sai do for do k
+						}
 					}
-				else
-					if(k == 1)
+				}else
+					if(k == 1){
 						if(afn[i][j][0] != '|')
 							afd[i][j] = afn[i][j][0]; //copia transição unitária para afd
-
-			//verifica linha a linha da matriz de novos estadosAFN se o estado ja está inserido
-			for (int m = 0; m < qntNovosEstAFD; ++m){
-				for (int n = 0; n < strlen(estadosPuros); ++n){ //copia cada linha em linhaALinha
-					linhaALinha[n] = novosEstadosParaOAFD[m][n];
-				}
-				if(afd[i][j] == '|')//se a celula do AFD for vazio, preenche com qndEstadoVelho + indice
-					if(strstr(linhaALinha,estAux)){//se coincidir, cria estado novo na matriz do AFD
-						aux[0] = (m + strlen(estadosPuros)) + '0'; //passa para char.
-						afd[i][j] = aux[0];
-						strcat(estadosAFD,aux);
 					}
 			}
-			limpaVetor(strlen(estadosPuros)+1,estAux);
-			coluna = 0;
+			//nesse ponto eu inseri um novo estado na matriz novosEstadosParaOAFD se ele ja nao estiver la.
+			
+			if(afd[i][j] == '|'){
+				//verifica linha a linha da matriz de novos estadosAFN se o estado ja está inserido
+				for (int m = 0; m < linha; ++m){
+					limpaVetor(strlen(estadosPuros)+2,linhaALinha);
+					for (int n = 0; n < strlen(estadosPuros); ++n){ //copia cada linha em linhaALinha
+						InserirElementoVetor(novosEstadosParaOAFD[m][n],linhaALinha,strlen(estadosPuros)+1);
+						//linhaALinha[n] = novosEstadosParaOAFD[m][n];
+					}
+					//se a celula do AFD for vazio, preenche com qntEstadoVelho + indice
+					printf("\nlinhaALinha: %s\n", linhaALinha);
+					printf("\nestAux: %s\n", estAux);
+					
+					if(strstr(linhaALinha,estAux)){//se coincidir, cria estado novo na matriz do AFD
+						
+						aux[0] = (m + strlen(estadosPuros)) + '0'; //passa para char.
+						//printf("aux[0] = %c\n",aux[0]);
+						afd[i][j] = aux[0];
+						if(aux[0] - '0' == strlen(estadosPuros)){
+
+							if(!strstr(estadosAFD,aux)){
+								//system("pause");
+								//printf("\nConcatenando '%c' em estadosAFD\n",aux[0]);
+								strcat(estadosAFD,aux);
+							}							
+						}
+						else{
+							//printf("\nInserindo '%c' em estadosAFD\n",aux[0]);
+							//InserirElementoVetor(aux[0],estadosAFD,strlen(estadosAFD));
+							strcat(estadosAFD,aux);
+						}	
+					}
+				}
+			}
 		}
 	}
 
@@ -241,7 +327,8 @@ void main(int argc, char *argv[])
 									novosEstadosParaOAFD[linha][l] = uniao[l];
 								aux[0] = (linha + strlen(estadosPuros)) + '0';
 								afd[i][j] = aux[0];
-								//printf("\nConcatenando '%c' em estadosAFD\nlinha vale: %d\n",aux[0],linha);
+								//printf("\nConcatenando '%c' em estadosAFD\n",aux[0]);
+								printf("\nConcatenando '%c' em estadosAFD\n",aux[0]);
 								strcat(estadosAFD,aux);
 								linha++;
 							}
@@ -272,7 +359,7 @@ void main(int argc, char *argv[])
 	fputs("<structure>\n\t<type>fa</type>\n\t<automaton>\n\t\t<!--The list of states.-->\n",arqAFD);
 	//criando estados
 	aux[0] = estadosAFD[0];
-	fputs("\t\t<state id=\"",arqAFD); fputs(aux,arqAFD); fputs("\" name=\"",arqAFD); fputs(aux,arqAFD); fputs("\">\n",arqAFD);
+	fputs("\t\t<state id=\"",arqAFD); fprintf(arqAFD,"%d",aux[0]-'0'); fputs("\" name=\"",arqAFD); fprintf(arqAFD,"%d",aux[0]-'0'); fputs("\">\n",arqAFD);
 	fputs("\t\t\t<x>",arqAFD); fprintf(arqAFD,"%d",x); fputs(".0</x>\n",arqAFD);
 	fputs("\t\t\t<y>108.0</y>\n",arqAFD);
 	fputs("\t\t\t<initial/>\n",arqAFD);
@@ -281,7 +368,7 @@ void main(int argc, char *argv[])
 	for(int e = 1; e < strlen(estadosAFD); e++){ //estados normais
 		aux[0] = estadosAFD[e];
 		if(!strstr(estadosFinaisAFD,aux)){//verifica se nao é estado final
-			fputs("\t\t<state id=\"",arqAFD); fputs(aux,arqAFD); fputs("\" name=\"",arqAFD); fputs(aux,arqAFD); fputs("\">\n",arqAFD);
+			fputs("\t\t<state id=\"",arqAFD); fprintf(arqAFD,"%d",aux[0]-'0'); fputs("\" name=\"",arqAFD); fprintf(arqAFD,"%d",aux[0]-'0'); fputs("\">\n",arqAFD);
 			fputs("\t\t\t<x>",arqAFD); fprintf(arqAFD,"%d",x); fputs(".0</x>\n",arqAFD);
 			fputs("\t\t\t<y>108.0</y>\n",arqAFD);
 			fputs("\t\t</state>\n",arqAFD);
@@ -290,7 +377,7 @@ void main(int argc, char *argv[])
 	}
 	for(int e = 0; e < strlen(estadosFinaisAFD); e++){ //estados finais
 		aux[0] = estadosFinaisAFD[e];
-		fputs("\t\t<state id=\"",arqAFD); fputs(aux,arqAFD); fputs("\" name=\"",arqAFD); fputs(aux,arqAFD); fputs("\">\n",arqAFD);
+		fputs("\t\t<state id=\"",arqAFD); fprintf(arqAFD,"%d",aux[0]-'0'); fputs("\" name=\"",arqAFD); fprintf(arqAFD,"%d",aux[0]-'0'); fputs("\">\n",arqAFD);
 		fputs("\t\t\t<x>",arqAFD); fprintf(arqAFD,"%d",x); fputs(".0</x>\n",arqAFD);
 		fputs("\t\t\t<y>108.0</y>\n",arqAFD);
 		fputs("\t\t\t<final/>\n",arqAFD);
@@ -383,16 +470,19 @@ void main(int argc, char *argv[])
 	}
 	printf("\n");
 	for (i = 0; i < (strlen(estadosPuros)*strlen(estadosPuros))-1; ++i){
-		if(afd[i][0] != '|')
+		//if(i<strlen(estadosAFD)){
 			printf("[%d] ",i);
-		for(int j = 0; j < strlen(alfabeto); j++){
-			if(afd[i][j] != '|')
-				printf("[%c]  ",afd[i][j]);
-		}
-		printf("\n");
+			for(int j = 0; j < strlen(alfabeto); j++){
+				if(afd[i][j] != '|')
+					printf("[%c]  ",afd[i][j]);
+				else
+					printf("     ");
+			}
+			printf("\n");
+		//}
 	}
 
-	printf("Estados AFD: %s\nEstados Finais AFD: %s\nQnt Estados AFD: %d\n\n",estadosAFD,estadosFinaisAFD,strlen(estadosAFD));
+	printf("\nEstados AFD: %s\nEstados Finais AFD: %s\nQnt Estados AFD: %d\n\n",estadosAFD,estadosFinaisAFD,strlen(estadosAFD));
 
 	if(aceita){
 		printf("\n\nACEITA\n");
