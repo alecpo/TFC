@@ -2,6 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 // OS NÃO TERMINAIS VÃO DE A-Z (ASCI = 65-90)
+long calcularTamanhoArquivo(FILE *arquivo) {
+    long posicaoAtual = ftell(arquivo);
+    long tamanho;
+    fseek(arquivo, 0, SEEK_END);
+    tamanho = ftell(arquivo);
+    fseek(arquivo, posicaoAtual, SEEK_SET);
+    return tamanho;
+}
 int verificaLetraEmNT(char variavel[], char letra){
 	char aux[2];
 	aux[1] = '\0';
@@ -15,13 +23,14 @@ int verificaLetraEmNT(char variavel[], char letra){
 
 int main(void)
 {
-    int i = 0;
-    int tamanhoLine;
-    char line[100];
+    int tamanhoStr,i = 0; // i = indice do vetor regra
+    int novoNT=0;
 	char nt[50];
 	char regra[50];
+	char novaRegra[50];
 	char letra = 'A';
-	int k;
+	char aux[3];
+	aux[2] = '\0';
 
 	system("cls");
 
@@ -30,51 +39,94 @@ int main(void)
 
     if (arquivo == NULL)
         return EXIT_FAILURE;
+    tamanhoStr = calcularTamanhoArquivo(arquivo)+1;
 
-    while(fgets(line, 100, arquivo) != NULL)
-    {
-		if(line[0] != '$')
-			nt[i] = line[0];
-        i++;
+    char arqStr[tamanhoStr*10];
+	fgets(arqStr, tamanhoStr, arquivo);
+	nt[novoNT] = arqStr[0]; //armazena em nt a primeira variavel da regra
+    i=0;
+    novoNT++;
+    for(int j = 0 ; j < tamanhoStr; j++){
+    	if(arqStr[j] == '$'){
+    		nt[novoNT] = arqStr[j+1];
+    		j+=3;
+    		novoNT++;
+    	}
+
     }
-    nt[i] = '\0';
-	fseek( arquivo, 0, SEEK_SET );
-	i=0;
-    while(fgets(line, 100, arquivo) != NULL)
-	{
-		tamanhoLine = strlen(line);
-       for(int j = 2; j<strlen(line); j++){
-       		if(line[j] != '|' && line[j] != '\n'){
-       			regra[i] = line[j];
-       			i++;
-       		}
-       		else{
-       			k = j-1; // pega posição antes da barra para reduzir a regra
-       			regra[i] = '\0';
-       			if(strlen(regra) > 2){
-       				while(verificaLetraEmNT(nt,letra)){
-       					letra++;
-       				}
-       				line[j - strlen(regra) + 1] = letra;
-       				nt[strlen(nt)] = letra;
-       				nt[strlen(nt) + 1] = '\0';
-       				printf("valor de k: %d\n",k);
-       				for(int a = 0 ; a < strlen(regra) - 2 ; a++){
-						for(int a = k ; a < strlen(line) ; a++){
-							line[a] = line[a+1];
-							k--;
-						}
+    nt[novoNT] = '\0';
+
+	for(int j = 2; j<strlen(arqStr); j++){
+		//printf("teste j: %c\n", arqStr[j]);
+		if(arqStr[j] != '|' && arqStr[j] != '$'){
+			regra[i] = arqStr[j];
+			i++;			
+		}
+		else{
+			regra[i] = '\0';
+			puts(regra);
+			if(strlen(regra) > 2){
+				strcpy(novaRegra,regra);
+				for (int a = 0; a < strlen(regra); ++a){
+					novaRegra[a] = regra[a+1];
+				}
+			}
+
+			if(arqStr[j] == '|'){
+				if(strlen(regra) > 2){
+					while(verificaLetraEmNT(nt,letra)){
+						letra++;
 					}
-					//puts(line);
-       			}
-       			i=0;
-       		}
-       	}
-    }
-    //printf("\n\nretorno da funcao: %d",verificaLetraEmNT(nt,'A'));
-    //printf("\nab\bc\n");
-	//puts("\nImprimindo nao-terminais:");
-	//puts(nt);
+					arqStr[j - strlen(regra) + 1] = letra; //substitui segunda letra pela nova variavel
+					//aux[0] = '$';
+					aux[0] = letra;
+					aux[1] = '>';
+					strcat(arqStr,aux);
+					strcat(arqStr,novaRegra);
+					strcat(arqStr,"$");
+					nt[strlen(nt)] = letra;//adiciona nova variavel no vetor de não terminais (nt).					
+					nt[strlen(nt) + 1] = '\0';
+					for(int a = 0 ; a < strlen(regra) - 2 ; a++){
+						for(int a = j-1 ; a < strlen(arqStr) ; a++){
+							arqStr[a] = arqStr[a + 1];
+						}
+						j--;
+					}
+				}
+				i=0;
+			}
+			else{
+				if(strlen(regra) > 2){
+					while(verificaLetraEmNT(nt,letra)){
+						letra++;
+					}
+					arqStr[j - strlen(regra) + 1] = letra;
+					//aux[0] = '$';
+					aux[0] = letra;
+					aux[1] = '>';
+					strcat(arqStr,aux);
+					strcat(arqStr,novaRegra);
+					strcat(arqStr,"$");
+					nt[strlen(nt)] = letra;
+					nt[strlen(nt) + 1] = '\0';
+					for(int a = 0 ; a < strlen(regra) - 2 ; a++){
+						for(int a = j-1 ; a < strlen(arqStr) ; a++){
+							arqStr[a] = arqStr[a + 1];
+						}
+						j--;
+					}
+				}
+				j+=2;
+				i=0;
+				printf("tam[arqStr]: %d    arqStr[%d]:%c   arqStr[%d]:%c\n\n",strlen(arqStr),j,arqStr[j],j+1,arqStr[j+1]);
+			}
+		}
+	}
+
+	puts("\nImprimindo nao-terminais:");
+	puts(nt);
+	puts(arqStr);
+	printf("%d\n", strlen(arqStr));
 
     fclose(arquivo);
 
