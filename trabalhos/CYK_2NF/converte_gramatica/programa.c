@@ -20,7 +20,46 @@ int verificaLetraEmNT(char variavel[], char letra){
 	else
 		return 0;
 }
+void imprimeVetInt(int vet[], int tam){
+	for (int i = 0; i < tam; ++i)
+	{
+		printf("%d ", vet[i]);
+	}
+	puts("");
+}
+int retornaIndice (char variaveis[],char variavel){
+	for (int i = 0; i < strlen(variaveis); ++i){
+		if(variaveis[i] == variavel)
+			return i;
+	}
+}
+char removeFrom(char vet[]){
+	char c = vet[0];
+	for (int i = 0; i < strlen(vet); ++i)
+	{
+		vet[i] = vet[i+1];
+	}
+	return c;
+}
+void arredaEInsere(){
+	//char aux[2], *beginRegraUnit;
+	char teste[] = "", *beginRegraUnit;
+	strcat(teste,"pato donald eh gay");
+	
+	beginRegraUnit = strstr(teste,"d");
+	
+	puts(beginRegraUnit);
+	/*aux[1] = '\0'; char occurs[], int tam, char varProdutora, char regraUnit[]
 
+	for (int i = 0; i < tam ; ++i){
+		if(){
+			while(occurs[i] != '$'){
+				i++;
+			}
+
+		}
+	}*/
+}
 int main(void)
 {
     int tamanhoStr,i = 0; // i = indice do vetor regra
@@ -55,6 +94,14 @@ int main(void)
 
     }
     nt[novoNT] = '\0';
+    /*
+    puts("\nVariaveis Iniciais:");
+	puts(nt);
+	puts("Gramatica:");
+	puts(arqStr);
+	puts("Tamanho inicial da gramatica:");
+	printf("%d\n", strlen(arqStr));;
+	*/
 
 	for(int j = 2; j<strlen(arqStr); j++){
 		//printf("teste j: %c\n", arqStr[j]);
@@ -64,7 +111,6 @@ int main(void)
 		}
 		else{
 			regra[i] = '\0';
-			puts(regra);
 			if(strlen(regra) > 2){
 				strcpy(novaRegra,regra);
 				for (int a = 0; a < strlen(regra); ++a){
@@ -118,17 +164,111 @@ int main(void)
 				}
 				j+=2;
 				i=0;
-				printf("tam[arqStr]: %d    arqStr[%d]:%c   arqStr[%d]:%c\n\n",strlen(arqStr),j,arqStr[j],j+1,arqStr[j+1]);
 			}
 		}
 	}
 
-	puts("\nImprimindo nao-terminais:");
+	/*
+	puts("\nVariaveis Finais:");
 	puts(nt);
-	puts(arqStr);
+	puts("Gramatica convertida:");*/
+	puts(arqStr);/*
+	puts("Tamanho final da gramatica:");
 	printf("%d\n", strlen(arqStr));
+	*/
+	fclose(arquivo);
 
-    fclose(arquivo);
+	/*======================== FIM DA CONVERSÃO ========================*/
+	/*========================DEFINIÇÃO: LAMBDA = & ====================*/
+
+	int qntNT = strlen(nt), nullable[qntNT], ia; //nullable representa quais terminais são anuláveis (0 ou 1), a ordem é a mesma do vetor "nt",ou seja os indices representam as variaveis, exemplo: 0:E, 1:T etc..
+	char toDo[] = "",occurs[] = "",regraAux[] = "", ntCopy[qntNT], aux1[2],aux2[4],firstIn;
+	char *var; // var = variavel que produziu &.
+
+	aux1[1] = '\0';
+	aux2[3] = '\0';
+
+	/*=============== zera nullable ===============*/
+	for (int a = 0; a < strlen(nt); a++){
+		nullable[a] = 0;
+	}
+
+	/*=============== for all A pertencente a N, occurs(a) = vazio. ===============*/
+	for (int a = 0; a < qntNT; a++){
+		aux2[0] = nt[a];
+		aux2[1] = '>';
+		aux2[2] = '$';
+		strcat(occurs,aux2);
+	}
+
+	/*=============== for all A -> B do ===============*/
+	i = 0;
+	ia = 0;
+	for(int j = 2; j<strlen(arqStr); j++){
+		if(arqStr[j] != '$'){
+			regra[i] = arqStr[j];
+			i++;			
+		}
+		else{
+			regra[i] = '$';
+			regra[i+1] = '\0';
+			for (int a = 0; a < strlen(regra); a++)
+			{
+				if(regra[a] != '|' && regra[a] != '$' && regra[a] != '&'){
+					aux1[0] = regra[a];
+					strcat(regraAux,aux1);
+				}
+				else{
+					if(strlen(regraAux) == 1 && strstr(nt,regraAux)){ // se for produção unitária e a regra for uma variável
+						puts(regraAux);
+						var = strstr(arqStr,regraAux);
+						var-=2;
+						//printf("%c -> %s\n",*var,regraAux);
+						arredaEInsere(); // occurs(B) := occurs(B) U {A} occurs,strlen(occurs),*var,regraAux
+					}
+					strcpy(regraAux,"");
+					//puts(regraAux);
+				}
+			}		
+			
+			if(arqStr[j] == '$')
+				j+=2;
+			i = 0;
+		}
+	}
+
+	/*=============== for all A -> BC do ===============*/	
+
+	/*=============== for all A -> & do ===============*/
+	i = 0;
+	for(int j = 2; j<strlen(arqStr); j++){
+		if(arqStr[j] != '$'){
+			regra[i] = arqStr[j];
+			i++;			
+		}
+		else{
+			regra[i] = '\0';
+			if(var = strstr(regra,"&")){
+				var = strstr(arqStr,regra); // ?> 'var' -> ..&...                  -> = aponta para
+				var-=2; // pega a variavel que produziu &, 'var' -> ?>...&...
+				nullable[retornaIndice(nt,*var)] = 1;//seta 1 para todas as variaveis que produzem &.
+				aux1[0] = *var;
+				strcat(toDo,aux1);
+			}
+			if(arqStr[j] == '$')
+				j+=2;
+			i = 0;
+		}
+	}
+
+	/*=============== while toDo != vazio do ===============*/
+	while(strcmp(toDo,"")){
+		firstIn = removeFrom(toDo);
+	}
+	//imprimeVetInt(nullable,strlen(nt));
+
+
+    
 
     return EXIT_SUCCESS;
 }

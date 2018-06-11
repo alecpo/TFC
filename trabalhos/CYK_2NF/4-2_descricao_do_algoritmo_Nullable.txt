@@ -1,0 +1,15 @@
+O Algoritmo Anulável encontra sucessivamente aqueles não-terminais que podem derivar o LAMBDA, 
+começando com aqueles que o derivam em um passo e avançando para trás através das regras.
+
+Para isso, os predecessores de um não-terminal B, ou seja, todos os não-terminais A, 
+tais que B ocorre do lado direito de uma regra A > a, precisam ser acessíveis sem procurar em toda a gramática.
+
+O algoritmo, portanto, começa por armazenar em um array inicialmente vazio "occurs" o conjunto de todos 
+esses A para cada um desses B. 
+
+Esta informação é usada para inferir da informação que se B é anulável, A também é anulável, 
+se A e B são ligado através de uma regra A > B. 
+
+Se eles estiverem vinculados por meio de uma regra A > BC ou A > CB, isso depende se o C também é anulável. 
+Assim, o vetor "occurs" na verdade vale para uma regra da forma A > B, o não-terminal A, e para uma regra da forma A > BC ou 
+A > CB, o par (A, C). Isto é então usado para evitar o tempo de execução quadrático.
